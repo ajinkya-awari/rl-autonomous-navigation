@@ -1,0 +1,18 @@
+# ── Install in this order to avoid dependency conflicts ───────────────────────
+#
+# 1. PyTorch first (CPU build below; for CUDA visit pytorch.org/get-started)
+# 2. Then gymnasium and stable-baselines3
+# 3. imageio handles GIF rendering
+
+torch==2.2.2
+torchvision==0.17.2
+
+gymnasium==0.29.1
+
+stable-baselines3==2.3.2
+
+numpy==1.26.4
+matplotlib==3.8.4
+
+imageio==2.34.1
+imageio[ffmpeg]
