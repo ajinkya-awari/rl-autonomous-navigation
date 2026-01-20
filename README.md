@@ -72,8 +72,8 @@ This is a two-line code change that meaningfully reduces overestimation on spars
 **Network architecture:** Linear(16→64) → ReLU → Linear(64→64) → ReLU → Linear(64→4)
 
 **Complexity:**
-- Space: $O(N_{\text{buffer}}) = O(10{,}000)$ transitions
-- Per-update: $O(\text{batch\_size}) = O(64)$
+- Space: O(N_buffer) = O(10,000) transitions
+- Per-update: O(batch_size) = O(64)
 
 ---
 
@@ -97,9 +97,9 @@ Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps p
 
 | Algorithm | Space Complexity | Per-Update Complexity | Requires Replay Buffer |
 |-----------|-----------------|----------------------|------------------------|
-| Q-Learning | $O(\|\mathcal{S}\|\|\mathcal{A}\|)$ | $O(1)$ | No |
-| Double DQN | $O(N_{\text{buffer}})$ | $O(\text{batch\_size})$ | Yes |
-| PPO | $O(n_{\text{steps}} \times N_{\text{envs}})$ | $O(n_{\text{steps}} \times n_{\text{epochs}})$ | No (on-policy) |
+| Q-Learning | O(\|S\|\|A\|) | O(1) | No |
+| Double DQN | O(N_buffer) | O(batch_size) | Yes |
+| PPO | O(n_steps × N_envs) | O(n_steps × n_epochs) | No (on-policy) |
 
 ---
 
