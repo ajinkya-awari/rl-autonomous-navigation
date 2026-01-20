@@ -1,0 +1,4 @@
+Algorithm,Mean Reward,Std,Final-100 Mean,Convergence Episode,Sample Efficiency (ep)
+Q-Learning,0.3377,0.4729,0.4900,N/A,N/A
+Double DQN,0.6092,0.4879,0.6200,1278,1333
+PPO,0.1676,0.3735,0.7380,N/A,N/A
