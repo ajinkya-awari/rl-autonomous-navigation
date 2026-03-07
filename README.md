@@ -105,7 +105,6 @@ Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps p
 
 ## Results
 
-*Fill these in after running `python main.py`:*
 
 | Algorithm | Mean Reward | Final-100 Mean | Greedy Success Rate | Convergence Episode |
 |-----------|-------------|----------------|---------------------|---------------------|
