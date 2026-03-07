@@ -11,7 +11,7 @@
 
 ## Abstract
 
-This repository presents a systematic empirical comparison of three reinforcement learning algorithms — **Tabular Q-Learning**, **Double Deep Q-Network (DDQN)**, and **Proximal Policy Optimization (PPO)** — applied to the stochastic FrozenLake-v1 navigation task. We analyse convergence behaviour, sample efficiency, and final policy quality across 10,000 training episodes for Q-Learning, 5,000 for Double DQN, and 100,000 timesteps for PPO. All algorithms are evaluated using an unbiased 500-episode greedy policy evaluation after training, separating exploration-noise-corrupted training rewards from true policy performance. The framework is modular: replace FrozenLake with any Gymnasium-compatible environment and all analysis pipelines run unchanged.
+This repository presents a systematic empirical comparison of three reinforcement learning algorithms  **Tabular Q-Learning**, **Double Deep Q-Network (DDQN)**, and **Proximal Policy Optimization (PPO)**  applied to the stochastic FrozenLake-v1 navigation task. We analyse convergence behaviour, sample efficiency, and final policy quality across 10,000 training episodes for Q-Learning, 5,000 for Double DQN, and 100,000 timesteps for PPO. All algorithms are evaluated using an unbiased 500-episode greedy policy evaluation after training, separating exploration-noise-corrupted training rewards from true policy performance. The framework is modular: replace FrozenLake with any Gymnasium-compatible environment and all analysis pipelines run unchanged.
 
 ---
 
@@ -29,7 +29,7 @@ The navigation task is formalised as a tuple $\mathcal{M} = (\mathcal{S}, \mathc
 | $\mathcal{R}(s,a,s')$ | Reward function | +1 at goal, 0 everywhere else |
 | $\gamma$ | Discount factor | 0.95 (Q-Learning), 0.99 (DDQN/PPO) |
 
-The agent must navigate from start (S) to goal (G) while avoiding holes (H) on a slippery surface. The stochastic transition model makes this a non-trivial credit assignment problem — the agent cannot simply memorise a deterministic path.
+The agent must navigate from start (S) to goal (G) while avoiding holes (H) on a slippery surface. The stochastic transition model makes this a non-trivial credit assignment problem  the agent cannot simply memorise a deterministic path.
 
 ### Objective
 
@@ -51,7 +51,7 @@ where $\alpha = 0.8$ and $\gamma = 0.95$. Exploration uses $\varepsilon$-greedy 
 
 **Complexity:**
 - Space: $O(|\mathcal{S}||\mathcal{A}|) = O(64)$
-- Per-update: $O(1)$ — a single table lookup and scalar write
+- Per-update: $O(1)$  a single table lookup and scalar write
 
 ---
 
@@ -59,9 +59,9 @@ where $\alpha = 0.8$ and $\gamma = 0.95$. Exploration uses $\varepsilon$-greedy 
 
 DQN (Mnih et al., 2015) approximates $Q(s, a; \theta)$ with a neural network and introduces two stability mechanisms:
 
-**Experience Replay** — transitions $(s, a, r, s', d)$ are stored in a circular buffer of capacity $N = 10{,}000$ and sampled uniformly. This breaks temporal correlations that destabilise gradient updates.
+**Experience Replay** - transitions $(s, a, r, s', d)$ are stored in a circular buffer of capacity $N = 10{,}000$ and sampled uniformly. This breaks temporal correlations that destabilise gradient updates.
 
-**Target Network** — a frozen copy $\hat{\theta}$ is used for TD targets, synced every 100 gradient steps. Without this, the network chases a non-stationary target and training diverges.
+**Target Network** - a frozen copy $\hat{\theta}$ is used for TD targets, synced every 100 gradient steps. Without this, the network chases a non-stationary target and training diverges.
 
 Standard DQN has a well-known positive bias: it uses the same (target) network to both *select* and *evaluate* the greedy next action, systematically overestimating Q-values. The **Double DQN** fix (van Hasselt et al., 2016) decouples the two:
 
@@ -83,7 +83,7 @@ PPO (Schulman et al., 2017) directly optimises a clipped surrogate objective tha
 
 $$\mathcal{L}^{\text{CLIP}}(\theta) = \mathbb{E}_t \left[ \min \left( r_t(\theta)\,\hat{A}_t,\;\; \text{clip}(r_t(\theta),\, 1-\varepsilon,\, 1+\varepsilon)\,\hat{A}_t \right) \right]$$
 
-where $r_t(\theta) = \pi_\theta(a_t|s_t)\,/\,\pi_{\theta_{\text{old}}}(a_t|s_t)$ is the probability ratio and $\hat{A}_t$ is the advantage estimate. The clip parameter $\varepsilon = 0.2$ prevents the policy from changing too drastically in a single update — critical on sparse-reward tasks where a few lucky rollouts would otherwise dominate the gradient.
+where $r_t(\theta) = \pi_\theta(a_t|s_t)\,/\,\pi_{\theta_{\text{old}}}(a_t|s_t)$ is the probability ratio and $\hat{A}_t$ is the advantage estimate. The clip parameter $\varepsilon = 0.2$ prevents the policy from changing too drastically in a single update, critical on sparse-reward tasks where a few lucky rollouts would otherwise dominate the gradient.
 
 Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps per rollout.
 
@@ -110,7 +110,7 @@ Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps p
 | Algorithm | Mean Reward | Final-100 Mean | Greedy Success Rate | Convergence Episode |
 |-----------|-------------|----------------|---------------------|---------------------|
 | Q-Learning | 0.3377 | 0.4900 | 56.6% | Not reached |
-| Double DQN | 0.6092 | 0.6200 | — | Episode 1278 |
+| Double DQN | 0.6092 | 0.6200 | - | Episode 1278 |
 | PPO | 0.1676 | 0.6300 | 73.8% | Not reached |
 
 *Full results also saved to `results/comparison_results.csv`.*
@@ -156,7 +156,7 @@ After running `main.py`, the following outputs are generated in `results/`:
 
 ## Connection to Applied Research
 
-This work extends my applied research at **The Leadership 30**, where I lead data-driven analysis of climate and disaster-response indicators across Maharashtra. A recurring challenge is coordinating physical delivery of resources to flood-isolated communities where road access is compromised. Autonomous navigation agents — trained with algorithms like those benchmarked here — form the decision-making core for drone-based emergency delivery systems. The stochastic MDP formulation studied here mirrors real operational uncertainty: sensor noise, wind disturbance, and partial observability in field deployments.
+This work extends my applied research at **The Leadership 30**, where I lead data-driven analysis of climate and disaster-response indicators across Maharashtra. A recurring challenge is coordinating physical delivery of resources to flood-isolated communities where road access is compromised. Autonomous navigation agents  trained with algorithms like those benchmarked here  form the decision-making core for drone-based emergency delivery systems. The stochastic MDP formulation studied here mirrors real operational uncertainty: sensor noise, wind disturbance, and partial observability in field deployments.
 
 ---
 
@@ -265,4 +265,4 @@ All outputs are written to the `results/` directory.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
