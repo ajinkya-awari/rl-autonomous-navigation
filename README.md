@@ -1,33 +1,27 @@
-# Reinforcement Learning for Autonomous Navigation: A Comparative Study
+# Behavioural Analysis of Reinforcement Learning Algorithms Under Stochastic Navigation Conditions
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2.2-ee4c2c?logo=pytorch)
 ![stable-baselines3](https://img.shields.io/badge/stable--baselines3-2.3.2-green)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1GfAYuqjPsox8bcs1t0LcdO1JMQkwIB4y?usp=sharing)
 
 ---
 
-## Abstract
+## Research Snapshot
 
 This repository presents a systematic empirical comparison of three reinforcement learning algorithms  **Tabular Q-Learning**, **Double Deep Q-Network (DDQN)**, and **Proximal Policy Optimization (PPO)**  applied to the stochastic FrozenLake-v1 navigation task. We analyse convergence behaviour, sample efficiency, and final policy quality across 10,000 training episodes for Q-Learning, 5,000 for Double DQN, and 100,000 timesteps for PPO. All algorithms are evaluated using an unbiased 500-episode greedy policy evaluation after training, separating exploration-noise-corrupted training rewards from true policy performance. The framework is modular: replace FrozenLake with any Gymnasium-compatible environment and all analysis pipelines run unchanged.
 
 ---
 
-## Problem Formulation
+## Project Overview
 
-### Markov Decision Process
+The environment is FrozenLake-v1 from the Gymnasium library: a 4×4 grid where an agent navigates from a start tile to a goal tile while avoiding holes on a slippery surface. Stochastic transitions (1/3 probability of lateral slip regardless of intended direction) make this a genuinely non-trivial credit assignment problem. The reward signal is sparse: +1 only on reaching the goal, 0 everywhere else.
 
-The navigation task is formalised as a tuple $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$:
+Three algorithms were implemented and evaluated:
 
-| Symbol | Definition | FrozenLake-v1 Instantiation |
-|--------|------------|------------------------------|
-| $\mathcal{S}$ | State space | 16 discrete positions on a 4×4 grid |
-| $\mathcal{A}$ | Action space | 4 cardinal directions: {←, ↓, →, ↑} |
-| $\mathcal{P}(s'\|s,a)$ | Transition probability | Stochastic: 1/3 chance of lateral slip |
-| $\mathcal{R}(s,a,s')$ | Reward function | +1 at goal, 0 everywhere else |
-| $\gamma$ | Discount factor | 0.95 (Q-Learning), 0.99 (DDQN/PPO) |
+- **Tabular Q-Learning** — no function approximation; the full state-action value table is updated directly via the Bellman equation
+- **Double DQN** — a neural network approximates Q-values; experience replay and a target network stabilise training; the Double DQN correction (van Hasselt et al., 2016) addresses Q-value overestimation
+- **PPO** — a policy-gradient method that directly optimises a clipped surrogate objective across 4 parallel environments
 
 The agent must navigate from start (S) to goal (G) while avoiding holes (H) on a slippery surface. The stochastic transition model makes this a non-trivial credit assignment problem  the agent cannot simply memorise a deterministic path.
 
@@ -39,11 +33,11 @@ $$\pi^* = \arg\max_\pi \mathbb{E}_\pi \left[ \sum_{t=0}^{T} \gamma^t r_t \right]
 
 ---
 
-## Methods
+## Research Questions
 
-### 1. Tabular Q-Learning
+1. **Convergence dynamics:** Do value-based and policy-gradient methods converge at different rates, and does convergence speed predict final policy quality?
 
-Q-Learning (Watkins & Dayan, 1992) maintains an explicit value table $Q \in \mathbb{R}^{|\mathcal{S}| \times |\mathcal{A}|}$ updated via the **Bellman optimality equation**:
+2. **Overestimation in sparse-reward settings:** Does the Q-value overestimation bias documented in standard DQN produce measurable degradation on a sparse-reward task, and does the Double DQN correction recover meaningful performance?
 
 $$Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right]$$
 
@@ -55,51 +49,54 @@ where $\alpha = 0.8$ and $\gamma = 0.95$. Exploration uses $\varepsilon$-greedy 
 
 ---
 
-### 2. Double Deep Q-Network (DDQN)
+## Methodology
 
-DQN (Mnih et al., 2015) approximates $Q(s, a; \theta)$ with a neural network and introduces two stability mechanisms:
+### Environment and MDP Formulation
 
 **Experience Replay** - transitions $(s, a, r, s', d)$ are stored in a circular buffer of capacity $N = 10{,}000$ and sampled uniformly. This breaks temporal correlations that destabilise gradient updates.
 
 **Target Network** - a frozen copy $\hat{\theta}$ is used for TD targets, synced every 100 gradient steps. Without this, the network chases a non-stationary target and training diverges.
 
-Standard DQN has a well-known positive bias: it uses the same (target) network to both *select* and *evaluate* the greedy next action, systematically overestimating Q-values. The **Double DQN** fix (van Hasselt et al., 2016) decouples the two:
+### Algorithm Implementations
 
-$$\mathcal{L}(\theta) = \mathbb{E} \left[ \left( r + \gamma \cdot Q\!\left(s',\; \underbrace{\arg\max_{a'} Q(s',a';\,\theta)}_{\text{policy net selects}};\; \hat{\theta} \right) - Q(s,a;\theta) \right)^2 \right]$$
+**Tabular Q-Learning** updates the value table via the Bellman optimality equation:
 
-This is a two-line code change that meaningfully reduces overestimation on sparse-reward MDPs.
+$$Q(s,a) \leftarrow Q(s,a) + \alpha \left[ r + \gamma \max_{a'} Q(s',a') - Q(s,a) \right]$$
 
-**Network architecture:** Linear(16→64) → ReLU → Linear(64→64) → ReLU → Linear(64→4)
+with $\alpha = 0.8$ and exponential $\varepsilon$-decay. Q-table initialised with small random values (uniform 0–0.01) to break action-selection symmetry.
 
-**Complexity:**
-- Space: O(N_buffer) = O(10,000) transitions
-- Per-update: O(batch_size) = O(64)
+**Double DQN** approximates $Q(s,a;\theta)$ with a two-layer MLP (16→64→64→4). The Double DQN correction decouples action selection from action evaluation:
+
+$$\mathcal{L}(\theta) = \mathbb{E}\left[\left(r + \gamma \cdot Q\!\left(s',\arg\max_{a'} Q(s',a';\theta);\,\hat{\theta}\right) - Q(s,a;\theta)\right)^2\right]$$
+
+Target network synced every 100 gradient steps; replay buffer capacity 10,000; gradient clipping at max-norm 1.0.
+
+**PPO** optimises a clipped surrogate objective with clip parameter $\varepsilon = 0.2$:
+
+$$\mathcal{L}^{\text{CLIP}}(\theta) = \mathbb{E}_t\left[\min\left(r_t(\theta)\hat{A}_t,\;\text{clip}(r_t(\theta), 1-\varepsilon, 1+\varepsilon)\hat{A}_t\right)\right]$$
+
+Trained across 4 parallel environments for 100,000 timesteps. Entropy coefficient 0.01 to discourage premature policy collapse.
+
+### Evaluation Protocol
+
+A deliberate methodological decision was made to report two separate metrics for each algorithm:
+
+- **Training reward** — mean reward across all training episodes, corrupted by exploration
+- **Greedy success rate** — 500-episode evaluation with $\varepsilon = 0$ (or deterministic policy for PPO) after training completes
+
+This separation is important: training rewards reflect the exploration-exploitation tradeoff during learning, while greedy success rate reflects the quality of the final learned policy.
 
 ---
 
-### 3. Proximal Policy Optimization (PPO)
+## Experimental Findings
 
-PPO (Schulman et al., 2017) directly optimises a clipped surrogate objective that prevents destructively large policy updates:
+**Convergence speed vs. final policy quality are decoupled.** DDQN converged fastest (rolling mean crossed 0.8 at episode 1,278), yet PPO produced the strongest greedy policy (73.8% success rate). Q-Learning never reached the 0.8 rolling-mean threshold across 10,000 episodes, though its greedy policy achieved 56.6% — higher than its training mean suggests.
 
-$$\mathcal{L}^{\text{CLIP}}(\theta) = \mathbb{E}_t \left[ \min \left( r_t(\theta)\,\hat{A}_t,\;\; \text{clip}(r_t(\theta),\, 1-\varepsilon,\, 1+\varepsilon)\,\hat{A}_t \right) \right]$$
+**On-policy mean rewards understate final policy quality.** PPO's training mean reward (0.1676) is the lowest of the three algorithms — a consequence of heavy early exploration across 4 parallel environments pulling the aggregate down. Its greedy evaluation (73.8%) is the highest. This discrepancy illustrates exactly why training rewards should not be the primary evaluation metric for on-policy algorithms.
 
 where $r_t(\theta) = \pi_\theta(a_t|s_t)\,/\,\pi_{\theta_{\text{old}}}(a_t|s_t)$ is the probability ratio and $\hat{A}_t$ is the advantage estimate. The clip parameter $\varepsilon = 0.2$ prevents the policy from changing too drastically in a single update, critical on sparse-reward tasks where a few lucky rollouts would otherwise dominate the gradient.
 
-Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps per rollout.
-
-**Complexity:**
-- Space: $O(n_{\text{steps}} \times N_{\text{envs}}) = O(2048)$ per rollout
-- Per-update: $O(n_{\text{steps}} \times n_{\text{epochs}}) = O(5120)$
-
----
-
-## Algorithm Complexity Summary
-
-| Algorithm | Space Complexity | Per-Update Complexity | Requires Replay Buffer |
-|-----------|-----------------|----------------------|------------------------|
-| Q-Learning | O(\|S\|\|A\|) | O(1) | No |
-| Double DQN | O(N_buffer) | O(batch_size) | Yes |
-| PPO | O(n_steps × N_envs) | O(n_steps × n_epochs) | No (on-policy) |
+**Stochasticity imposes a ceiling on tabular methods.** Q-Learning's greedy policy (56.6%) is substantially below DDQN and PPO despite 10,000 training episodes. The 1/3 slip probability means the greedy policy cannot reliably execute any planned path — the tabular representation cannot express uncertainty over outcomes, only expected values.
 
 ---
 
@@ -112,43 +109,29 @@ Training uses $N_{\text{envs}} = 4$ parallel environments collecting 512 steps p
 | Double DQN | 0.6092 | 0.6200 | - | Episode 1278 |
 | PPO | 0.1676 | 0.6300 | 73.8% | Not reached |
 
-*Full results also saved to `results/comparison_results.csv`.*
+*Greedy success rate: 500-episode evaluation with ε=0 after training. Full numeric results in `results/comparison_results.csv`.*
 
----
+### Visualisations
 
-## Visualisations
-
-After running `main.py`, the following outputs are generated in `results/`:
-
-| File | Description |
-|------|-------------|
-| `compare_learning_curves.png` | Reward per episode for all three algorithms |
-| `compare_convergence.png` | Convergence speed comparison |
-| `compare_final_performance.png` | Final performance bar chart |
-| `compare_sample_efficiency.png` | Reward vs environment steps |
-| `qtable_heatmap.png` | Q-table value heatmap (Q-Learning) |
-| `policy_arrows.png` | Learned policy visualised on the grid |
-| `navigation_path.gif` | Animated navigation path of the best policy |
-
-### Learning Curves
+**Learning Curves**
 ![Learning Curves](results/compare_learning_curves.png)
 
-### Convergence Speed
+**Convergence Speed**
 ![Convergence](results/compare_convergence.png)
 
-### Final Performance
+**Final Performance**
 ![Final Performance](results/compare_final_performance.png)
 
-### Sample Efficiency
+**Sample Efficiency**
 ![Sample Efficiency](results/compare_sample_efficiency.png)
 
-### Q-Table Heatmap
-![Q-Table Heatmap](results/qtable_heatmap.png)
-
-### Learned Policy
+**Learned Policy (Greedy Actions)**
 ![Policy Arrows](results/policy_arrows.png)
 
-### Navigation GIF
+**Q-Table Heatmap**
+![Q-Table Heatmap](results/qtable_heatmap.png)
+
+**Navigation GIF (Q-Learning greedy policy)**
 ![Navigation](results/navigation_path.gif)
 
 ---
@@ -163,87 +146,74 @@ This work extends my applied research at **The Leadership 30**, where I lead dat
 
 ```
 rl-autonomous-navigation/
-├── main.py                   ← Run everything (recommended entry point)
-├── run_all.py                ← Subprocess-based sequential runner
-├── q_learning.py             ← Tabular Q-Learning from scratch
-├── dqn_agent.py              ← Double DQN (PyTorch)
-├── ppo_agent.py              ← PPO (stable-baselines3)
-├── compare_algorithms.py     ← Comparison plots and CSV
-├── utils.py                  ← Shared visualisation and metrics utilities
+│
+├── q_learning.py           ← Tabular Q-Learning from scratch (pure NumPy)
+│                             Bellman update, epsilon-greedy, Q-table delta tracking
+│
+├── dqn_agent.py            ← Double DQN (PyTorch)
+│                             Experience replay, target network, DDQN correction
+│
+├── ppo_agent.py            ← PPO (stable-baselines3)
+│                             4 parallel envs, custom RewardLogger callback
+│
+├── compare_algorithms.py   ← Comparison plots and summary CSV
+│                             Learning curves, sample efficiency, convergence speed
+│
+├── utils.py                ← Shared utilities
+│                             evaluate_greedy_policy, plot_policy_arrows,
+│                             plot_qtable_heatmap, render_navigation_gif,
+│                             compute_stats, smooth_curve
+│
+├── main.py                 ← Single-process orchestrator (recommended entry point)
+├── run_all.py              ← Subprocess-based sequential runner
 ├── requirements.txt
-├── .gitignore
-├── LICENSE
-└── results/                  ← Created at runtime
-    ├── ql_results.pkl
-    ├── dqn_results.pkl
-    ├── ppo_results.pkl
+└── results/                ← Generated at runtime by main.py
+    ├── *.png               ← 9 plots
+    ├── navigation_path.gif
+    ├── comparison_results.csv
     ├── dqn_model.pth
     ├── ppo_model.zip
-    ├── qtable_heatmap.png
-    ├── policy_arrows.png
-    ├── navigation_path.gif
-    ├── compare_learning_curves.png
-    ├── compare_sample_efficiency.png
-    ├── compare_final_performance.png
-    ├── compare_convergence.png
-    └── comparison_results.csv
+    └── *.pkl               ← Serialised results for each algorithm
 ```
 
 ---
 
-## Setup & Usage
+## Research Context
 
-### Requirements
+This project was built to investigate a specific question about learning dynamics rather than to maximise benchmark performance: whether the structural differences between tabular, value-approximation, and policy-gradient methods produce meaningfully different behaviours when the environment is genuinely stochastic and the reward signal is sparse.
 
-- Python 3.10 or higher
-- Windows 10/11, macOS, or Linux
+The choice of FrozenLake-v1 was deliberate. Its stochastic transitions stress-test the credit assignment mechanism of each algorithm in a way that deterministic environments cannot. Its small state space (16 states) allows the tabular method to be included without the comparison becoming unfair — Q-Learning operates with full expressivity here, yet still falls short of the approximation-based methods on greedy evaluation.
 
-### Installation
+The broader motivation is applied: at The Leadership 30, I work on data-driven flood response for communities in Maharashtra where physical access is compromised during monsoon season. Autonomous navigation agents form the decision-making core of drone-based delivery systems in such settings — environments that are inherently stochastic, partially observable, and sparse in feedback. Understanding how RL algorithms behave under these conditions, not just which achieves the highest score, is the practical question this investigation addresses.
+
+---
+
+## Setup and Usage
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/ajinkya-awari/rl-autonomous-navigation.git
 cd rl-autonomous-navigation
 
-# 2. Create and activate a virtual environment
 python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS / Linux
 
-# 3. Install dependencies
 pip install -r requirements.txt
-```
-
-### Running
-
-```bash
-# Run everything in sequence (recommended)
 python main.py
-
-# Or run individual modules
-python q_learning.py
-python dqn_agent.py
-python ppo_agent.py
-python compare_algorithms.py   # requires the three pkl files above
 ```
 
-All outputs are written to the `results/` directory.
+All outputs are written to `results/`. Runtime approximately 5–10 minutes on CPU.
 
 ---
 
 ## References
 
-1. **Watkins, C. J. C. H. & Dayan, P.** (1992). Q-learning. *Machine Learning*, 8(3–4), 279–292. https://doi.org/10.1007/BF00992698
-
-2. **Mnih, V. et al.** (2015). Human-level control through deep reinforcement learning. *Nature*, 518(7540), 529–533. https://doi.org/10.1038/nature14236
-
-3. **van Hasselt, H., Guez, A. & Silver, D.** (2016). Deep Reinforcement Learning with Double Q-learning. *AAAI Conference on Artificial Intelligence*. https://arxiv.org/abs/1509.06461
-
-4. **Schulman, J. et al.** (2017). Proximal Policy Optimization Algorithms. *arXiv preprint arXiv:1707.06347*. https://arxiv.org/abs/1707.06347
-
-5. **Sutton, R. S. & Barto, A. G.** (2018). *Reinforcement Learning: An Introduction* (2nd ed.). MIT Press. http://incompleteideas.net/book/the-book-2nd.html
-
-6. **Raffin, A. et al.** (2021). Stable-Baselines3: Reliable Reinforcement Learning Implementations. *Journal of Machine Learning Research*, 22(268), 1–8. https://jmlr.org/papers/v22/20-1364.html
+1. Watkins, C. J. C. H. & Dayan, P. (1992). Q-learning. *Machine Learning*, 8(3–4), 279–292.
+2. Mnih, V. et al. (2015). Human-level control through deep reinforcement learning. *Nature*, 518, 529–533.
+3. van Hasselt, H., Guez, A. & Silver, D. (2016). Deep Reinforcement Learning with Double Q-learning. *AAAI*.
+4. Schulman, J. et al. (2017). Proximal Policy Optimization Algorithms. *arXiv:1707.06347*.
+5. Sutton, R. S. & Barto, A. G. (2018). *Reinforcement Learning: An Introduction* (2nd ed.). MIT Press.
+6. Raffin, A. et al. (2021). Stable-Baselines3. *JMLR*, 22(268), 1–8.
 
 ---
 
@@ -252,9 +222,8 @@ All outputs are written to the `results/` directory.
 ```bibtex
 @misc{awari2025rl_navigation,
   author       = {Awari, Ajinkya},
-  title        = {Reinforcement Learning for Autonomous Navigation:
-                  A Comparative Study of Q-Learning, Double DQN, and PPO},
-  year         = {2026},
+  title        = {Behavioural Analysis of RL Algorithms Under Stochastic Navigation Conditions},
+  year         = {2025},
   publisher    = {GitHub},
   howpublished = {\url{https://github.com/ajinkya-awari/rl-autonomous-navigation}},
 }
